@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ken Murimi | IT Student Portfolio</title>
+    <meta name="description" content="Professional portfolio of Ken Murimi, IT Student and Developer">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💼</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💼</text></svg>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Slab:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -125,6 +130,59 @@
             margin-bottom: 3rem;
         }
         
+        /* Install Prompt */
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            z-index: 1000;
+            display: none;
+            max-width: 320px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .install-prompt.show {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .install-prompt p {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .install-prompt-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .install-prompt-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        
+        .install-prompt-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .install-prompt-btn.secondary {
+            background: transparent;
+            color: var(--gray);
+        }
+        
         /* Header and Navigation */
         header {
             position: fixed;
@@ -172,6 +230,22 @@
         
         .nav-links a:hover {
             color: var(--primary);
+        }
+        
+        .install-btn {
+            display: none;
+            margin-left: 2rem;
+            background: var(--accent);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius);
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        
+        .install-btn:hover {
+            background: var(--primary);
         }
         
         .hamburger {
@@ -573,6 +647,10 @@
                 margin: 1.5rem 0;
             }
             
+            .install-btn {
+                display: none;
+            }
+            
             .hamburger {
                 display: block;
             }
@@ -583,6 +661,12 @@
             
             .projects-grid, .certs-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .install-prompt {
+                right: 10px;
+                left: 10px;
+                max-width: none;
             }
         }
         
@@ -617,6 +701,15 @@
     </style>
 </head>
 <body>
+    <!-- Install Prompt -->
+    <div class="install-prompt" id="installPrompt">
+        <p>Install Ken's Portfolio app for a better experience</p>
+        <div class="install-prompt-buttons">
+            <button class="install-prompt-btn primary" id="installButton">Install</button>
+            <button class="install-prompt-btn secondary" id="dismissButton">Dismiss</button>
+        </div>
+    </div>
+
     <!-- Header & Navigation -->
     <header>
         <div class="container">
@@ -630,6 +723,7 @@
                     <li><a href="#certifications">Certifications</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>
+                <a href="#" class="install-btn" id="headerInstallButton">Install App</a>
                 <div class="hamburger">
                     <i class="fas fa-bars"></i>
                 </div>
@@ -889,7 +983,95 @@
         </div>
     </footer>
 
+    <!-- PWA Service Worker Registration -->
     <script>
+        // Register service worker for PWA functionality
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                .then((registration) => {
+                    console.log('Service Worker registered with scope:', registration.scope);
+                })
+                .catch((error) => {
+                    console.log('Service Worker registration failed:', error);
+                });
+            });
+        }
+
+        // PWA Installation prompt
+        let deferredPrompt;
+        const installPrompt = document.getElementById('installPrompt');
+        const installButton = document.getElementById('installButton');
+        const dismissButton = document.getElementById('dismissButton');
+        const headerInstallButton = document.getElementById('headerInstallButton');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Stash the event so it can be triggered later
+            deferredPrompt = e;
+            // Show the install button in header
+            headerInstallButton.style.display = 'block';
+            // Show the custom install prompt
+            installPrompt.classList.add('show');
+            
+            // Check if the app is already installed
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                headerInstallButton.style.display = 'none';
+                installPrompt.classList.remove('show');
+            }
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            
+            // Show the install prompt
+            deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            // We've used the prompt, and can't use it again
+            deferredPrompt = null;
+            
+            // Hide the custom install prompt
+            installPrompt.classList.remove('show');
+            headerInstallButton.style.display = 'none';
+        });
+
+        dismissButton.addEventListener('click', () => {
+            installPrompt.classList.remove('show');
+        });
+
+        headerInstallButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (!deferredPrompt) return;
+            
+            // Show the install prompt
+            deferredPrompt.prompt();
+            
+            // Wait for the user to respond to the prompt
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            // We've used the prompt, and can't use it again
+            deferredPrompt = null;
+            
+            // Hide the custom install prompt
+            installPrompt.classList.remove('show');
+            headerInstallButton.style.display = 'none';
+        });
+
+        // Check if the app is already installed
+        window.addEventListener('appinstalled', () => {
+            // Hide the installation UI
+            installPrompt.classList.remove('show');
+            headerInstallButton.style.display = 'none';
+            // Clear the deferredPrompt so it can be garbage collected
+            deferredPrompt = null;
+            console.log('PWA was installed');
+        });
+
         // Navigation toggle
         const hamburger = document.querySelector('.hamburger');
         const navLinks = document.querySelector('.nav-links');
